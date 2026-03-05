@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureShare | Fast & Secure Sharing</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Secure<span>Share</span></div>
+            <p>Share messages and files with a secret key.</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="send">Send Content</button>
+            <button class="tab-btn" data-tab="retrieve">Retrieve Content</button>
+        </div>
+
+        <main>
+            <!-- Send Section -->
+            <section id="send-section" class="tab-content active">
+                <div class="card">
+                    <div class="input-group">
+                        <label for="message">Message (optional)</label>
+                        <textarea id="message" placeholder="Type your secret message here..."></textarea>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Upload Files (optional)</label>
+                        <div class="file-drop-area" id="drop-area">
+                            <span class="fake-btn">Choose files</span>
+                            <span class="file-msg">or drag and drop here</span>
+                            <input class="file-input" type="file" id="file-input">
+                        </div>
+                        <div id="file-name-display" class="file-name"></div>
+                    </div>
+
+                    <button id="send-btn" class="main-btn">Generate Secret Code</button>
+                    
+                    <div id="send-result" class="result-box hidden">
+                        <p>Your Secret Code:</p>
+                        <div class="code-display">
+                            <span id="generated-code">XXXXXX</span>
+                            <button id="copy-btn" title="Copy Code">📋</button>
+                        </div>
+                        <p class="small">Share this code with the recipient. Valid for 24 hours.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Retrieve Section -->
+            <section id="retrieve-section" class="tab-content">
+                <div class="card">
+                    <div class="input-group">
+                        <label for="retrieve-code">Enter Secret Code</label>
+                        <input type="text" id="retrieve-code" placeholder="e.g. A1B2C3" maxlength="10">
+                    </div>
+                    <button id="retrieve-btn" class="main-btn">Retrieve Content</button>
+
+                    <div id="retrieve-result" class="result-box hidden">
+                        <div id="content-display" class="content-display">
+                            <!-- Content will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
