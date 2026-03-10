@@ -1,7 +1,9 @@
 node_modules/
 backend/node_modules/
+backend/uploads/
 .env
 backend/.env
 error.log
 output.txt
 *.log
+.DS_Store
