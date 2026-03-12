@@ -20,9 +20,18 @@ app.use(express.static(path.join(__dirname, '../frontend'))); // For frontend
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+const mongodb_uri = process.env.MONGODB_URI;
+if (!mongodb_uri) {
+  console.error('ERROR: MONGODB_URI is not defined in environment variables.');
+  console.log('Server will start but DB features will fail.');
+} else {
+  mongoose.connect(mongodb_uri)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => {
+      console.error('MongoDB connection error:', err);
+      console.log('Continuing server start despite DB error...');
+    });
+}
 
 // Schema
 const shareSchema = new mongoose.Schema({
@@ -35,10 +44,17 @@ const shareSchema = new mongoose.Schema({
 
 const Share = mongoose.model('Share', shareSchema);
 
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  console.log('Creating uploads directory...');
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 // File Upload Config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + file.originalname);
@@ -100,6 +116,7 @@ app.get('/api/retrieve/:code', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${PORT}`);
+  console.log(`Static files being served from: ${path.join(__dirname, '../frontend')}`);
 });
