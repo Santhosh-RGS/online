@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedFile) formData.append('file', selectedFile);
 
         try {
-            const response = await fetch('/api/send', {
+         const response = await fetch('https://online-ew8m.onrender.com/api/send', {
                 method: 'POST',
                 body: formData
             });
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         retrieveResult.classList.add('hidden');
 
         try {
-            const response = await fetch(`/api/retrieve/${code}`);
+         const response = await fetch(`https://online-ew8m.onrender.com/api/retrieve/${code}`);
             const data = await response.json();
 
             if (response.ok) {
