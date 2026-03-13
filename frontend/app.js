@@ -1,9 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("SecureShare Frontend Initialized");
-    // Dynamic API URL: Use Live API if opened as file, relative path if on a server
-    const BASE_URL = window.location.protocol === 'file:' 
-        ? "https://online-1-ev8d.onrender.com" 
-        : "";
+    // Live API URL (Render backend)
+    const API_URL = "https://online-1-ev8d.onrender.com/api/send";
+    const BASE_URL = "https://online-1-ev8d.onrender.com";
 
     let selectedFile = null;
 
@@ -59,20 +58,33 @@ document.addEventListener('DOMContentLoaded', () => {
         sendBtn.disabled = true;
         sendBtn.textContent = 'Connecting...';
 
-        const formData = new FormData();
-        if (message) formData.append('message', message);
-        if (selectedFile) formData.append('file', selectedFile);
+        let fetchOptions;
 
-        // Timer to show "Waking up" if it's slow (Render sleep)
+        if (selectedFile) {
+            // Use FormData for file uploads
+            const formData = new FormData();
+            if (message) formData.append('message', message);
+            formData.append('file', selectedFile);
+            
+            fetchOptions = {
+                method: "POST",
+                body: formData
+            };
+        } else {
+            // Use JSON for simple text messages (as requested)
+            fetchOptions = {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message })
+            };
+        }
+
         const wakingUpTimer = setTimeout(() => {
             if (sendBtn.disabled) sendBtn.textContent = 'Waking up server (please wait)...';
         }, 3000);
 
         try {
-            const response = await fetch(`${BASE_URL}/api/send`, {
-                method: "POST",
-                body: formData
-            });
+            const response = await fetch(API_URL, fetchOptions);
 
             const data = await response.json();
             clearTimeout(wakingUpTimer);
