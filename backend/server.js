@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { MongoClient } = require('mongodb');
 const multer = require('multer');
 const crypto = require('crypto');
 const path = require('path');
@@ -8,7 +8,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
@@ -19,36 +19,31 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 const mongodb_uri = process.env.MONGODB_URI;
+let db;
 let isDbConnected = false;
 
 if (!mongodb_uri) {
   console.error('ERROR: MONGODB_URI is not defined in environment variables.');
-  console.log('Server will start but DB features will fail.');
 } else {
-  mongoose.connect(mongodb_uri)
+  const client = new MongoClient(mongodb_uri);
+  client.connect()
     .then(() => {
-      console.log('Connected to MongoDB');
+      console.log('MongoDB Connected successfully');
+      db = client.db();
       isDbConnected = true;
+      
+      // Create TTL Index (expires after 24 hours)
+      db.collection('shares').createIndex({ createdAt: 1 }, { expireAfterSeconds: 86400 })
+        .then(() => console.log('TTL Index verified'))
+        .catch(err => console.error('Error creating index:', err));
     })
     .catch(err => {
       console.error('MongoDB connection error:', err.message);
       console.log('--------------------------------------------------');
-      console.log('TIP: If you are running locally, make sure MongoDB');
-      console.log('is installed and running at: ' + mongodb_uri);
+      console.log('TIP: Check your Atlas credentials in .env');
       console.log('--------------------------------------------------');
     });
 }
-
-// Schema
-const shareSchema = new mongoose.Schema({
-  code: { type: String, required: true, unique: true },
-  content: { type: String, required: true }, // Message or filename
-  type: { type: String, enum: ['text', 'file', 'image', 'document'], required: true },
-  originalName: { type: String }, // For files
-  createdAt: { type: Date, default: Date.now, expires: 86400 } // Auto-delete after 24 hours (86400 seconds)
-});
-
-const Share = mongoose.model('Share', shareSchema);
 
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, 'uploads');
@@ -75,36 +70,39 @@ const upload = multer({ storage });
 app.post('/api/send', upload.single('file'), async (req, res) => {
   try {
     if (!isDbConnected) {
-      return res.status(503).json({ error: 'Database not connected. Please check if MongoDB is running.' });
+      return res.status(503).json({ error: 'Database not connected. Please check Atlas settings.' });
     }
     const { message } = req.body;
     const file = req.file;
     const code = crypto.randomBytes(3).toString('hex').toUpperCase();
 
-    let newShare;
+    let newShareData = {
+      code,
+      createdAt: new Date()
+    };
 
     if (file) {
       let type = 'file';
       if (file.mimetype.startsWith('image/')) type = 'image';
       else if (file.mimetype === 'application/pdf') type = 'document';
 
-      newShare = new Share({
-        code,
+      newShareData = {
+        ...newShareData,
         content: file.filename,
         originalName: file.originalname,
         type
-      });
+      };
     } else if (message) {
-      newShare = new Share({
-        code,
+      newShareData = {
+        ...newShareData,
         content: message,
         type: 'text'
-      });
+      };
     } else {
       return res.status(400).json({ error: 'No content provided' });
     }
 
-    await newShare.save();
+    await db.collection('shares').insertOne(newShareData);
     res.json({ success: true, code });
   } catch (error) {
     console.error('Save error:', error);
@@ -115,7 +113,10 @@ app.post('/api/send', upload.single('file'), async (req, res) => {
 // 2. Retrieve Content
 app.get('/api/retrieve/:code', async (req, res) => {
   try {
-    const share = await Share.findOne({ code: req.params.code.toUpperCase() });
+    if (!isDbConnected) {
+      return res.status(503).json({ error: 'Database not available' });
+    }
+    const share = await db.collection('shares').findOne({ code: req.params.code.toUpperCase() });
     if (!share) {
       return res.status(404).json({ error: 'Invalid or expired code' });
     }
