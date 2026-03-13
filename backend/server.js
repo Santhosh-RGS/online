@@ -19,15 +19,23 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 const mongodb_uri = process.env.MONGODB_URI;
+let isDbConnected = false;
+
 if (!mongodb_uri) {
   console.error('ERROR: MONGODB_URI is not defined in environment variables.');
   console.log('Server will start but DB features will fail.');
 } else {
   mongoose.connect(mongodb_uri)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(() => {
+      console.log('Connected to MongoDB');
+      isDbConnected = true;
+    })
     .catch(err => {
-      console.error('MongoDB connection error:', err);
-      console.log('Continuing server start despite DB error...');
+      console.error('MongoDB connection error:', err.message);
+      console.log('--------------------------------------------------');
+      console.log('TIP: If you are running locally, make sure MongoDB');
+      console.log('is installed and running at: ' + mongodb_uri);
+      console.log('--------------------------------------------------');
     });
 }
 
@@ -66,6 +74,9 @@ const upload = multer({ storage });
 // 1. Send Content
 app.post('/api/send', upload.single('file'), async (req, res) => {
   try {
+    if (!isDbConnected) {
+      return res.status(503).json({ error: 'Database not connected. Please check if MongoDB is running.' });
+    }
     const { message } = req.body;
     const file = req.file;
     const code = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -114,7 +125,15 @@ app.get('/api/retrieve/:code', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running at http://0.0.0.0:${PORT}`);
-  console.log(`Static files being served from: ${path.join(__dirname, '../frontend')}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Serving frontend from: ${path.join(__dirname, '../frontend')}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`ERROR: Port ${PORT} is already in use.`);
+    console.log('Try closing other terminals or changing the PORT in .env');
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+  }
 });

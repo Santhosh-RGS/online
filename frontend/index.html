@@ -5,31 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureShare | Fast & Secure Sharing</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">Secure<span>Share</span></div>
-            <p>Share messages and files with a secret key.</p>
+            <p>Share messages and files with a premium touch.</p>
         </header>
 
-        <div class="tabs">
+        <nav class="tabs">
             <button class="tab-btn active" data-tab="send">Send Content</button>
             <button class="tab-btn" data-tab="retrieve">Retrieve Content</button>
-        </div>
+        </nav>
 
         <main>
             <!-- Send Section -->
             <section id="send-section" class="tab-content active">
                 <div class="card">
                     <div class="input-group">
-                        <label for="message">Message (optional)</label>
-                        <textarea id="message" placeholder="Type your secret message here..."></textarea>
+                        <label for="message">Your Secret Message</label>
+                        <textarea id="message" placeholder="Type something confidential..."></textarea>
                     </div>
                     
                     <div class="input-group">
-                        <label>Upload Files (optional)</label>
+                        <label>Upload Files</label>
                         <div class="file-drop-area" id="drop-area">
                             <span class="fake-btn">Choose files</span>
                             <span class="file-msg">or drag and drop here</span>
@@ -41,12 +41,12 @@
                     <button id="send-btn" class="main-btn">Generate Secret Code</button>
                     
                     <div id="send-result" class="result-box hidden">
-                        <p>Your Secret Code:</p>
+                        <p class="small">Success! Your code is ready:</p>
                         <div class="code-display">
                             <span id="generated-code">XXXXXX</span>
                             <button id="copy-btn" title="Copy Code">📋</button>
                         </div>
-                        <p class="small">Share this code with the recipient. Valid for 24 hours.</p>
+                        <p class="small">Valid for 24 hours. Keep it safe!</p>
                     </div>
                 </div>
             </section>
