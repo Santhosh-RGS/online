@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("SecureShare Frontend Initialized");
-    // Live API URL (Render backend)
-    const API_URL = "https://online-1-ev8d.onrender.com/api/send";
-    const BASE_URL = "https://online-1-ev8d.onrender.com";
+    // Use same origin so it works locally and when frontend is served by the same backend
+    const API_BASE = window.location.origin;
 
     let selectedFile = null;
 
@@ -46,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SEND CONTENT
     sendBtn.addEventListener('click', async () => {
-        console.log("Send button clicked");
         const message = messageInput.value.trim();
 
         if (!message && !selectedFile) {
@@ -54,24 +51,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        console.log("Targeting API:", `${BASE_URL}/api/send`);
         sendBtn.disabled = true;
         sendBtn.textContent = 'Connecting...';
 
         let fetchOptions;
-
         if (selectedFile) {
-            // Use FormData for file uploads
             const formData = new FormData();
             if (message) formData.append('message', message);
             formData.append('file', selectedFile);
-            
-            fetchOptions = {
-                method: "POST",
-                body: formData
-            };
+            fetchOptions = { method: "POST", body: formData };
         } else {
-            // Use JSON for simple text messages (as requested)
             fetchOptions = {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -84,32 +73,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
 
         try {
-            const response = await fetch(API_URL, fetchOptions);
-
-            const data = await response.json();
+            const response = await fetch(`${API_BASE}/api/send`, fetchOptions);
+            let data;
+            try {
+                data = await response.json();
+            } catch (_) {
+                showToast(response.ok ? 'Invalid response from server' : 'Server error. Try again.');
+                return;
+            }
             clearTimeout(wakingUpTimer);
 
             if (data.success) {
-                console.log("Success! Code:", data.code);
                 generatedCode.textContent = data.code;
                 sendResult.classList.remove('hidden');
                 showToast("Content shared successfully!");
-
                 messageInput.value = "";
                 fileInput.value = "";
                 selectedFile = null;
                 fileNameDisplay.textContent = "";
             } else {
-                console.error("API Error:", data.error);
-                if (BASE_URL !== "" && response.status >= 500) {
-                    showToast("Live Server is currently down. Please run your local backend!");
-                } else {
-                    showToast("Error: " + data.error);
-                }
+                showToast(data.error || "Something went wrong");
             }
         } catch (error) {
             console.error("Fetch failed:", error);
-            showToast("Connection failed. Check your console (F12).");
+            showToast("Connection failed. Check your network.");
         } finally {
             clearTimeout(wakingUpTimer);
             sendBtn.disabled = false;
@@ -120,8 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // RETRIEVE CONTENT
     retrieveBtn.addEventListener('click', async () => {
         const code = retrieveCodeInput.value.trim().toUpperCase();
-        console.log("Retrieve clicked for code:", code);
-
         if (!code) {
             showToast("Please enter a code");
             return;
@@ -132,16 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
         retrieveResult.classList.add('hidden');
 
         try {
-            console.log("Fetching from:", `${BASE_URL}/api/retrieve/${code}`);
-            const response = await fetch(`${BASE_URL}/api/retrieve/${code}`);
-            const data = await response.json();
+            const response = await fetch(`${API_BASE}/api/retrieve/${code}`);
+            let data;
+            try {
+                data = await response.json();
+            } catch (_) {
+                showToast(response.ok ? 'Invalid response from server' : 'Content not found or server error.');
+                return;
+            }
 
             if (response.ok) {
-                console.log("Content retrieved successfully");
                 renderContent(data);
                 retrieveResult.classList.remove("hidden");
             } else {
-                console.warn("Retrieve failed:", data.error);
                 showToast(data.error || "Content not found");
             }
         } catch (error) {
@@ -155,20 +143,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render retrieved content
     function renderContent(data) {
-
         contentDisplay.innerHTML = "";
-
+        if (!data || !data.type) return;
         if (data.type === "text") {
 
             const div = document.createElement("div");
             div.className = "retrieved-text";
-            div.textContent = data.content;
-
+            div.textContent = data.content ?? '';
             contentDisplay.appendChild(div);
 
         } else {
-
-            const fileUrl = `${BASE_URL}/uploads/${data.content}`;
+            const fileUrl = `${API_BASE}/uploads/${data.content}`;
 
             if (data.type === "image") {
 
@@ -186,11 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadLink.className = "file-link";
 
             const icon = data.type === "image" ? "🖼️" : (data.type === "document" ? "📄" : "📁");
-
+            const safeName = (() => {
+                const d = document.createElement('div');
+                d.textContent = data.originalName || 'File';
+                return d.innerHTML;
+            })();
             downloadLink.innerHTML = `
                 <span class="file-icon">${icon}</span>
                 <div class="file-info">
-                    <strong>${data.originalName}</strong>
+                    <strong>${safeName}</strong>
                     <p class="small">Click to download</p>
                 </div>
             `;
@@ -203,13 +192,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Copy code
     copyBtn.addEventListener("click", () => {
-
         const code = generatedCode.textContent;
-
-        navigator.clipboard.writeText(code);
-
-        showToast("Code copied to clipboard!");
-
+        navigator.clipboard.writeText(code)
+            .then(() => showToast("Code copied to clipboard!"))
+            .catch(() => showToast("Copy failed. Select and copy manually."));
     });
 
     // Toast message
